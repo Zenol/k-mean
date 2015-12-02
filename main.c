@@ -8,9 +8,9 @@
 #define LABELS "train-labels-idx1-ubyte"
 #define NB_ITEMS 6000
 #define K        15
-#define STEPS    1000
+#define STEPS    100
 
-//#define SAVE_PICS
+#define SAVE_PICS
 
 s_matrix **pics;
 unsigned char *labels;
@@ -79,7 +79,7 @@ int main()
     kmeans_learn_from_set(km, nb, pics, STEPS);
 
     //Save images
-    printf("Save...\n");
+    printf("\nSave...\n");
     for (i = 0; i < K; i++)
     {
         char buff[256];
