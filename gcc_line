@@ -1,0 +1,1 @@
+gcc -lm -Wall matrix.c main.c kmeans.c
