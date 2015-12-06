@@ -11,6 +11,7 @@ s_kmeans *kmeans_create(int ik, int iw, int ih)
     km = malloc(sizeof(*km));
     km->k = ik;
     km->mu = malloc(sizeof(*km->mu) * ik);
+    km->labels = malloc(km->k * sizeof(*km->labels));
 
     for (i = 0; i < ik; i++)
         km->mu[i] = matrix_randomize(matrix_create(iw, ih));
@@ -82,14 +83,14 @@ void compute_means(s_kmeans *km, int set_size, s_matrix **data_set, int *asso_li
     unsigned int *count;
 
     // Used to count how much object in each group
-    count = malloc(km->k * sizeof(*count));
+    count = calloc(km->k, sizeof(*count));
     // Save the size of our matrices
     size = km->mu[0]->size;
     // Alocate km->k big matrices
-    mu_sum = malloc(sizeof(*mu_sum) * km->k);
+    mu_sum = calloc(km->k, sizeof(*mu_sum));
     for (i = 0; i < km->k; i++)
     {
-        mu_sum[i] = malloc(sizeof(*mu_sum[i]) * size);
+        mu_sum[i] = calloc(size, sizeof(*mu_sum[i]));
         count[i] = 0;
     }
 
@@ -133,6 +134,68 @@ s_kmeans *kmeans_learn_from_set(s_kmeans *km, int set_size, s_matrix **data_set,
         asso_swap(&asso_id, &new_asso_id);
     }
     compute_means(km, set_size, data_set, asso_id);
-
+    fprintf(stdout, "Step %d over %d\n", steps, steps);
     return km;
+}
+
+unsigned int kmeans_get_closest_picture(s_kmeans *km, s_matrix *picture)
+{
+  unsigned int j;
+  unsigned int kidx;
+  unsigned int min_dist;
+  unsigned int tmp_dist;
+
+  kidx = 0;
+  min_dist = matrix_dist(km->mu[0], picture);
+  for (j = 1; j < km->k; j++)
+    {
+      tmp_dist = matrix_dist(km->mu[j], picture);
+      if (tmp_dist < min_dist)
+	{
+	  kidx = j;
+	  min_dist = tmp_dist;
+	}
+    }
+  return kidx;
+}
+
+// Return the label the algorithm give to picture (give_labels should have be caled)
+unsigned int kmeans_get_label_from_learned_kmeans(s_kmeans *km, s_matrix *picture)
+{
+  return km->labels[kmeans_get_closest_picture(km, picture)];
+}
+
+void kmeans_give_labels(s_kmeans *km, int set_size, unsigned char *labels, s_matrix **pics)
+{
+  int i;
+  int digit;
+  int k_idx;
+  int vote_idx;
+  int best_vote;
+  unsigned int **sum_labels;
+
+  sum_labels = calloc(km->k, sizeof(*sum_labels));
+  for (i = 0; i < km->k; i++)
+    sum_labels[i] = calloc(10, sizeof (*sum_labels[i]));
+
+  for (i = 0; i < set_size; i++)
+    {
+      k_idx = kmeans_get_closest_picture(km, pics[i]);
+      sum_labels[k_idx][labels[i]]++;
+    }
+
+  for (i = 0; i < km->k; i++)
+    {
+      vote_idx = 0;
+      best_vote = sum_labels[i][0];
+      for (digit = 1; digit < 10; digit++)
+	if (best_vote < sum_labels[i][digit])
+	  {
+	    best_vote = sum_labels[i][digit];
+	    vote_idx = digit;
+	  }
+      km->labels[i] = vote_idx;
+    }
+
+  free(sum_labels);
 }
