@@ -10,10 +10,10 @@
 
 #define IMAGES       "train-images-idx3-ubyte"
 #define LABELS       "train-labels-idx1-ubyte"
-#define IMAGES_CHECK "train-images-idx3-ubyte"
-#define LABELS_CHECK "train-labels-idx1-ubyte"
-#define K        15
-#define STEPS    15
+#define IMAGES_CHECK "t10k-images-idx3-ubyte"
+#define LABELS_CHECK "t10k-labels-idx1-ubyte"
+#define K        50
+#define STEPS    20
 
 //#define SAVE_PICS
 
@@ -123,7 +123,7 @@ int main()
     printf("Learn...\n");
     km = kmeans_create(K, w, h);
 
-    kmeans_learn_from_set(km, nb, pics, STEPS);
+    kmeans_learn_from_set(km, 10000, pics, STEPS);
 
     //Labelate all pictures
     kmeans_give_labels(km, nb, labels, pics);
@@ -139,6 +139,7 @@ int main()
     
     how_much_right = check_algo(km, nb, labels, pics);
 
+    printf("K=%d\nSTEPS=%d\n", K, STEPS);
     printf("Efficiency : %d / %d = %f percents\n",
 	   how_much_right, nb, (float)how_much_right / (float)nb * 100.f);
 

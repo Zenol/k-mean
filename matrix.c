@@ -77,8 +77,9 @@ unsigned int matrix_dist(s_matrix *a, s_matrix *b)
     for (i = 0; i < a->size; i++)
     {
         tmp = abs(a->data[i] - b->data[i]);
-        diff += tmp*tmp;
+	diff += tmp*tmp;
     }
+
     diff = floor(sqrt(diff));
     return diff;
 }
