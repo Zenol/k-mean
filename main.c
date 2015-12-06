@@ -7,6 +7,7 @@
 
 #include "matrix.h"
 #include "kmeans.h"
+#include "mean.h"
 
 #define IMAGES       "train-images-idx3-ubyte"
 #define LABELS       "train-labels-idx1-ubyte"
@@ -74,7 +75,9 @@ unsigned char *load_labels(char *filename, int *nb)
   return labels;
 }
 
-unsigned int check_algo(s_kmeans *km, unsigned int nb, unsigned char *labels, s_matrix **pics)
+typedef unsigned int (get_label_ptr) (void*, s_matrix*);
+
+unsigned int check_algo(void *param, unsigned int nb, unsigned char *labels, s_matrix **pics, get_label_ptr *fct)
 {
   int i;
   unsigned int count;
@@ -82,7 +85,7 @@ unsigned int check_algo(s_kmeans *km, unsigned int nb, unsigned char *labels, s_
   count = 0;
   for (i = 0; i < nb; i++)
     {
-      if(labels[i] == kmeans_get_label_from_learned_kmeans(km, pics[i]))
+      if(labels[i] == (*fct)(param, pics[i]))
 	count++;
     }
   return count;
@@ -90,8 +93,8 @@ unsigned int check_algo(s_kmeans *km, unsigned int nb, unsigned char *labels, s_
 
 int main()
 {
+    s_mean *m;
     s_kmeans *km;
-    int magic;
     int nb;
     int w, h;
     int i;
@@ -128,6 +131,10 @@ int main()
     //Labelate all pictures
     kmeans_give_labels(km, nb, labels, pics);
 
+    //Naive supervised learning (mean)
+    m = mean_create(w, h);
+    mean_compute(m, nb, labels, pics);
+
     //Check efficiency with an other data set
     for (i = 0; i < nb; i++)
       free(pics[i]);
@@ -136,21 +143,41 @@ int main()
     
     labels = load_labels(LABELS_CHECK, &nb);
     pics = load_images(IMAGES_CHECK, &nb, &w, &h);
-    
-    how_much_right = check_algo(km, nb, labels, pics);
+
+    //K-Means algorithm
+    how_much_right = check_algo(km, nb, labels, pics,
+				(get_label_ptr*)&kmeans_get_label_from_learned_kmeans);
 
     printf("K=%d\nSTEPS=%d\n", K, STEPS);
-    printf("Efficiency : %d / %d = %f percents\n",
+    printf("Efficiency (kmeans) : %d / %d = %f percents\n",
 	   how_much_right, nb, (float)how_much_right / (float)nb * 100.f);
 
-    //Save images
-    printf("\nSave...\n");
+    //Mean algorithm
+    how_much_right = check_algo(m, nb, labels, pics,
+				(get_label_ptr*)&mean_get_label);
+
+    printf("Efficiency (mean) : %d / %d = %f percents\n",
+	   how_much_right, nb, (float)how_much_right / (float)nb * 100.f);
+
+    
+    //Save k-mean images
+    printf("\nSave kmean mus...\n");
     for (i = 0; i < K; i++)
     {
         char buff[256];
 
-        sprintf(buff, "mu_k%d_d%d.pbm", i, km->labels[i]);
+        sprintf(buff, "km_mu_k%d_d%d.pbm", i, km->labels[i]);
         matrix_save(km->mu[i], buff);
+    }
+
+    //Save mean images
+    printf("\nSave mean mu...\n");
+    for (i = 0; i < 10; i++)
+    {
+        char buff[256];
+
+        sprintf(buff, "m_mu_%d.pbm", i);
+        matrix_save(m->mu[i], buff);
     }
 
     return 0;
